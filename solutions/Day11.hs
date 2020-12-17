@@ -2,8 +2,17 @@
 
 module Day10 where
 
+import Control.Comonad
+import Control.Comonad.Store
+import Control.Monad (mfilter)
+import Data.Maybe (catMaybes)
 import qualified Data.Text as T
 import FileHelper
+
+type Grid a = Store (Int, Int) a
+
+-- instance (Eq a) => Eq (Store (Int, Int) a) where
+--   x == y = True
 
 sampleInput =
   [ "L.LL.LL.LL",
@@ -17,6 +26,34 @@ sampleInput =
     "L.LLLLLL.L",
     "L.LLLLL.LL"
   ]
+
+indexGrid :: [[a]] -> (Int, Int) -> Maybe a
+indexGrid grid (i, j)
+  | 0 <= i && i < n && 0 <= j && j < d = Just $ (grid !! i) !! j
+  | otherwise = Nothing
+  where
+    n = length grid
+    d = length $ head grid
+
+neighbourhood :: Grid (Maybe a) -> [Maybe a]
+neighbourhood grid = neighbours
+  where
+    (i, j) = pos grid
+    neighbours =
+      [ peek (i + di, j + dj) grid
+        | di <- [-1, 0, 1],
+          dj <- [-1, 0, 1],
+          (di, dj) /= (0, 0)
+      ]
+
+updateSeat :: Grid (Maybe Char) -> Maybe Char
+updateSeat grid =
+  case peek (pos grid) grid of
+    Just 'L' -> Just (if null occupied then '#' else 'L')
+    Just '#' -> Just (if 4 <= length occupied then 'L' else '#')
+    n -> n
+  where
+    occupied = mfilter (== '#') (catMaybes $ neighbourhood grid)
 
 type ADJ = [String] -> Int -> Int -> String
 
@@ -54,6 +91,11 @@ fix f x =
 
 part1 :: [String] -> Int
 part1 input = foldr (\row acc -> acc + length (filter (== '#') row)) 0 (fix (\x -> stepState x adjacentOccupied changeSeat1) input)
+
+-- part1 :: [String] -> Grid Char
+-- part1 input = extend updateSeat grid
+--   where
+--     grid = store (indexGrid input) (0, 0)
 
 firstInDirection :: [String] -> (Int, Int) -> Int -> Int -> Char
 firstInDirection input dir@(di, dj) i j
