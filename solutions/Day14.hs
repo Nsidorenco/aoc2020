@@ -51,19 +51,13 @@ parseInput = newlineSep parseMask
     newlineSep p = p `sepBy` char '\n'
 
 applyMask :: String -> String -> String
-applyMask mask input = foldr apply "" (zip mask input)
-  where
-    apply (m, x) acc =
-      case m of
-        'X' -> x : acc
-        _ -> m : acc
+applyMask = zipWith (\m x -> if m == 'X' then x else m)
 
-updateMem :: (Int, String) -> M.Map Int String -> M.Map Int String
-updateMem (idx, val) = M.insert idx val
+updateMem :: Int -> String -> M.Map Int String -> M.Map Int String
+updateMem = M.insert
 
 runMask :: (String, [(Int, String)]) -> M.Map Int String -> M.Map Int String
-runMask (mask, vals) map =
-  foldl' (flip updateMem) map masked
+runMask (mask, vals) map = foldl' (flip (uncurry updateMem)) map masked
   where
     masked = fmap (applyMask mask) <$> vals
 
@@ -74,29 +68,29 @@ part1 :: [(String, [(Int, String)])] -> Int
 part1 = foldr ((+) . binToInt) 0 . runInstructions
 
 permuteIndex :: String -> Int -> [Int]
-permuteIndex mask idx = binToInt <$> f mask (intToBin idx)
+permuteIndex mask idx = binToInt <$> applyFilter
   where
-    f [] [] = [[]]
-    f (m : ms) (x : xs) =
-      case m of
-        'X' -> ((['0'] <>) <$> res) ++ ((['1'] <>) <$> res)
-        '1' -> ([m] <>) <$> res
-        '0' -> ([x] <>) <$> res
-      where
-        res = f ms xs
+    applyFilter =
+      ( mapM
+          ( \(m, x) -> case m of
+              'X' -> ['0', '1']
+              '1' -> ['1']
+              '0' -> [x]
+          )
+          (zip mask (intToBin idx))
+      )
 
 updateInstruction :: (String, [(Int, String)]) -> (String, [(Int, String)])
-updateInstruction (mask, ins) = (mask, foldr f' [] ins)
+updateInstruction (mask, ins) = (mask, val)
   where
-    f' :: (Int, String) -> [(Int, String)] -> [(Int, String)]
-    f' (idx, val) acc = ((,val) <$> permuteIndex mask idx) ++ acc
+    val = ins >>= \(idx, x) -> (,x) <$> permuteIndex mask idx -- zip all new indexes with the store value
 
 updateInstructions :: [(String, [(Int, String)])] -> [(String, [(Int, String)])]
 updateInstructions = map updateInstruction
 
 runMask2 :: (String, [(Int, String)]) -> M.Map Int String -> M.Map Int String
-runMask2 (mask, vals) map =
-  foldl' (flip updateMem) map vals
+runMask2 (_, vals) map =
+  foldl' (flip (uncurry updateMem)) map vals
 
 runInstructions2 :: [(String, [(Int, String)])] -> M.Map Int String
 runInstructions2 = foldl' (flip runMask2) M.empty
@@ -109,6 +103,7 @@ solve = do
   file <- readInput 14
   -- let file = sampleInput2
   let input = parseOnly parseInput file
+  either print (print . part1) input
   case input of
     Right x -> print $ part2 x
     _ -> error ""
