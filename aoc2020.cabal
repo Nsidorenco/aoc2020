@@ -38,6 +38,7 @@ executable aoc2020
                        , Day1
                        , Day10
                        , Day15
+                       , Day19
   -- other-extensions:
   build-depends:       aoc2020
                      , attoparsec >= 0.13.2.4

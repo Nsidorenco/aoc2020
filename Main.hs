@@ -1,7 +1,7 @@
 module Main where
 
-import Day15
+import Day19
 
 main :: IO ()
 main = do
-  solve
+  print $ part2 complicatedRules complicatedMessages

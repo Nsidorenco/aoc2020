@@ -47,7 +47,7 @@ ast txt = go [] txt 0
     go pre (x : xs) n = case x of
       '(' -> go (x : pre) xs (n + 1)
       ')' -> go (x : pre) xs (n - 1)
-    go _ [] _ = LiteralNode $ read txt
+    go _ [] _ = LiteralNode $ read $ filter (\x -> x /= '(' && x /= ')') txt
 
 prepareInput :: T.Text -> T.Text
 prepareInput = T.filter (/= ' ')
